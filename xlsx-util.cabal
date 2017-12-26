@@ -1,0 +1,24 @@
+name:                xlsx-util
+version:             0.1.0.0
+-- synopsis:
+-- description:
+homepage:            https://github.com/githubuser/xlsx-util#readme
+license:             2ClauseBSD
+license-file:        LICENSE
+author:              jabaraster
+maintainer:          ah@jabara.info
+copyright:           2017 jabaraster
+category:            Utility
+build-type:          Simple
+cabal-version:       >=1.10
+extra-source-files:  README.md
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     Jabara.Util.Xlsx
+  default-language:    Haskell2010
+  build-depends:       base
+                     , bytestring
+                     , text
+                     , lens
+                     , xlsx
