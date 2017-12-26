@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Jabara.Util.Xlsx (
-    readBook
+  RowIndex
+  , ColumnIndex
+  , readBook
   , cellDoubleValue
   , cellDoubleValue'
   , cellIntegralValue
