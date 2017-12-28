@@ -21,6 +21,7 @@ import           Prelude              hiding (readFile)
 readBook :: FilePath -> IO Xlsx
 readBook path = readFile path >>= pure . toXlsx
 
+type SheetName = Text
 type RowIndex = Int
 type ColumnIndex = Int
 
