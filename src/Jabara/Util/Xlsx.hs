@@ -53,8 +53,8 @@ cellIntegralValue Nothing = 0
 cellIntegralValue (Just (CellDouble d)) = ceiling d
 cellIntegralValue (Just c)              = error ("unexpected cell value --> " ++ show c)
 
-cellStringValue' :: (Integral a) => Worksheet -> (RowIndex, ColumnIndex) -> a
-cellStringValue' sheet cell = cellIntegralValue $ sheet ^? ixCell cell . cellValue . _Just
+cellStringValue' :: Worksheet -> (RowIndex, ColumnIndex) -> Text
+cellStringValue' sheet cell = cellStringValue $ sheet ^? ixCell cell . cellValue . _Just
 
 cellStringValue :: Maybe CellValue -> Text
 cellStringValue Nothing = ""
