@@ -19,6 +19,7 @@ import           Control.Lens
 import           Data.ByteString.Lazy (readFile)
 import           Data.Maybe
 import           Data.Text
+import           Data.Time.Calendar
 import           Prelude              hiding (readFile)
 
 readBook :: FilePath -> IO Xlsx
@@ -32,7 +33,7 @@ cellBoolValue' :: Worksheet -> (RowIndex, ColumnIndex) -> Bool
 cellBoolValue' sheet cell = cellBoolValue $ sheet ^? ixCell cell . cellValue . _Just
 
 cellBoolValue :: Maybe CellValue -> Bool
-cellBoolValue Nothing = error "bool cell not found"
+cellBoolValue Nothing = error "cell not found"
 cellBoolValue (Just (CellBool b)) = b
 cellBoolValue (Just c)              = error ("unexpected cell value --> " ++ show c)
 
@@ -60,3 +61,11 @@ cellStringValue Nothing = ""
 cellStringValue (Just (CellText t)) = t
 cellStringValue (Just c)            = error ("unexpected cell value --> " ++ show c)
 
+
+cellDayValue' :: Worksheet -> (RowIndex, ColumnIndex) -> Day
+cellDayValue' sheet cell = cellDayValue $ sheet ^? ixCell cell . cellValue . _Just
+
+cellDayValue :: Maybe CellValue -> Day
+cellDayValue Nothing = error "cell not found"
+cellDayValue mCell = let dayValue = cellIntegralValue mCell
+                     in  addDays (dayValue - 2) $ fromGregorian 1900 1 1

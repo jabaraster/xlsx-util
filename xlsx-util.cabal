@@ -1,5 +1,5 @@
 name:                xlsx-util
-version:             0.1.0.0
+version:             0.1.0.1
 -- synopsis:
 -- description:
 homepage:            https://github.com/githubuser/xlsx-util#readme
@@ -20,5 +20,6 @@ library
   build-depends:       base
                      , bytestring
                      , text
+                     , time
                      , lens
                      , xlsx
