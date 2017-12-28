@@ -4,6 +4,8 @@ module Jabara.Util.Xlsx (
   , ColumnIndex
   , SheetName
   , readBook
+  , cellBoolValue
+  , cellBoolValue'
   , cellDoubleValue
   , cellDoubleValue'
   , cellIntegralValue
@@ -25,6 +27,14 @@ readBook path = readFile path >>= pure . toXlsx
 type SheetName = Text
 type RowIndex = Int
 type ColumnIndex = Int
+
+cellBoolValue' :: Worksheet -> (RowIndex, ColumnIndex) -> Bool
+cellBoolValue' sheet cell = cellBoolValue $ sheet ^? ixCell cell . cellValue . _Just
+
+cellBoolValue :: Maybe CellValue -> Bool
+cellBoolValue Nothing = error "bool cell not found"
+cellBoolValue (Just (CellBool b)) = b
+cellBoolValue (Just c)              = error ("unexpected cell value --> " ++ show c)
 
 cellDoubleValue' :: Worksheet -> (RowIndex, ColumnIndex) -> Double
 cellDoubleValue' sheet cell = cellDoubleValue $ sheet ^? ixCell cell . cellValue . _Just
