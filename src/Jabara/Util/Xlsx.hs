@@ -12,6 +12,10 @@ module Jabara.Util.Xlsx (
   , cellIntegralValue'
   , cellStringValue
   , cellStringValue'
+  , cellDayValue
+  , cellDayValue'
+  , cellDayValueM
+  , cellDayValueM'
 ) where
 
 import           Codec.Xlsx
