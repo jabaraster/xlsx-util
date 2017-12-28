@@ -69,3 +69,11 @@ cellDayValue :: Maybe CellValue -> Day
 cellDayValue Nothing = error "cell not found"
 cellDayValue mCell = let dayValue = cellIntegralValue mCell
                      in  addDays (dayValue - 2) $ fromGregorian 1900 1 1
+
+cellDayValueM' :: Worksheet -> (RowIndex, ColumnIndex) -> Maybe Day
+cellDayValueM' sheet cell = cellDayValueM $ sheet ^? ixCell cell . cellValue . _Just
+
+cellDayValueM :: Maybe CellValue -> Maybe Day
+cellDayValueM Nothing = Nothing
+cellDayValueM mCell = let dayValue = cellIntegralValue mCell
+                      in  Just $ addDays (dayValue - 2) $ fromGregorian 1900 1 1
