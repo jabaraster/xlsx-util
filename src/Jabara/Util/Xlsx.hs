@@ -2,6 +2,7 @@
 module Jabara.Util.Xlsx (
   RowIndex
   , ColumnIndex
+  , SheetName
   , readBook
   , cellDoubleValue
   , cellDoubleValue'
