@@ -10,6 +10,9 @@ module Jabara.Util.Xlsx (
   , CellLocation(..)
   , clRow
   , clColumn
+  , shiftCellLocation
+  , shiftRowLocation
+  , shiftColumnLocation
 
   , cellBoolValue
   , cellBoolValueFromSheet
@@ -64,11 +67,17 @@ data CellLocation =
     } deriving (Show, Read, Eq)
 makeLenses ''CellLocation
 
-shiftLocation :: CellLocation -> CellLocation -> CellLocation
-shiftLocation base offset = CellLocation {
+shiftCellLocation :: CellLocation -> CellLocation -> CellLocation
+shiftCellLocation base offset = CellLocation {
                               _clRow    = base^.clRow + offset^.clRow
                             , _clColumn = base^.clColumn + offset^.clColumn
                             }
+
+shiftRowLocation :: CellLocation -> Int -> CellLocation
+shiftRowLocation base offset = base { _clRow = base^.clRow + offset }
+
+shiftColumnLocation :: CellLocation -> Int -> CellLocation
+shiftColumnLocation base offset = base { _clColumn = base^.clColumn + offset }
 
 columnLabelToIndex :: ColumnLabel -> ColumnIndex
 columnLabelToIndex label = fromInteger $ snd $ foldr core (0, 0)  $ unpack $ toUpper label
