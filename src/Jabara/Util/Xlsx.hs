@@ -1,9 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE TemplateHaskell   #-}
 module Jabara.Util.Xlsx (
-  RowIndex
+    RowIndex
   , ColumnIndex
   , SheetName
   , readBook
+
+  , CellLocation(..)
+  , clRow
+  , clColumn
 
   , cellBoolValue
   , cellBoolValueFromSheet
@@ -29,15 +35,19 @@ module Jabara.Util.Xlsx (
   , cellDayValueFromSheet
   , cellDayValueM
   , cellDayValueFromSheetM
+
+  , columnLabelToIndex
+  , parseCellName
 ) where
 
 import           Codec.Xlsx
 import           Control.Lens
 import           Data.ByteString.Lazy (readFile)
 import           Data.Maybe
-import           Data.Text
+import           Data.Text            (Text, pack, toUpper, unpack)
 import           Data.Time.Calendar
 import           Prelude              hiding (readFile)
+import           Text.Parsec
 
 readBook :: FilePath -> IO Xlsx
 readBook path = readFile path >>= pure . toXlsx
@@ -45,12 +55,51 @@ readBook path = readFile path >>= pure . toXlsx
 type SheetName = Text
 type RowIndex = Int
 type ColumnIndex = Int
+type ColumnLabel = Text
 
-cellBoolValueFromSheet :: Worksheet -> (RowIndex, ColumnIndex) -> Bool
-cellBoolValueFromSheet sheet cell = cellBoolValue $ sheet ^? ixCell cell . cellValue . _Just
+data CellLocation =
+    CellLocation {
+      _clRow    :: Int
+    , _clColumn :: Int
+    } deriving (Show, Read, Eq)
+makeLenses ''CellLocation
 
-cellBoolValueFromSheetM :: Worksheet -> (RowIndex, ColumnIndex) -> Maybe Bool
-cellBoolValueFromSheetM sheet cell = cellBoolValueM $ sheet ^? ixCell cell . cellValue . _Just
+shiftLocation :: CellLocation -> CellLocation -> CellLocation
+shiftLocation base offset = CellLocation {
+                              _clRow    = base^.clRow + offset^.clRow
+                            , _clColumn = base^.clColumn + offset^.clColumn
+                            }
+
+columnLabelToIndex :: ColumnLabel -> ColumnIndex
+columnLabelToIndex label = fromInteger $ snd $ foldr core (0, 0)  $ unpack $ toUpper label
+  where
+    core :: Char -> (Integer, Integer) -> (Integer, Integer)
+    core alphabet (digit, value) =
+        let val = (26 ^ digit) * ((fromEnum alphabet) - 64)
+        in  (digit + 1, value + toInteger val)
+
+parseCellName :: Text -> Maybe CellLocation
+parseCellName n =
+    case runParser p () "" (unpack n) of
+        Left  _ -> Nothing
+        Right r -> Just r
+  where
+    p = do
+          col <- many letter
+          row <- many $ oneOf ['1','2','3','4','5','6','7','8','9','0']
+          return CellLocation {
+                   _clRow    = read row
+                 , _clColumn = columnLabelToIndex $ pack col
+                 }
+
+ixCell' :: CellLocation -> Traversal' Worksheet Cell
+ixCell' ci = ixCell (ci^.clRow, ci^.clColumn)
+
+cellBoolValueFromSheet :: Worksheet -> CellLocation -> Bool
+cellBoolValueFromSheet sheet cell = cellBoolValue $ sheet ^? ixCell' cell . cellValue . _Just
+
+cellBoolValueFromSheetM :: Worksheet -> CellLocation -> Maybe Bool
+cellBoolValueFromSheetM sheet cell = cellBoolValueM $ sheet ^? ixCell' cell . cellValue . _Just
 
 cellBoolValue :: Maybe CellValue -> Bool
 cellBoolValue Nothing = error "cell not found"
@@ -62,11 +111,11 @@ cellBoolValueM Nothing             = Nothing
 cellBoolValueM (Just (CellBool b)) = Just b
 cellBoolValueM (Just _)            = Nothing
 
-cellDoubleValueFromSheet :: Worksheet -> (RowIndex, ColumnIndex) -> Double
-cellDoubleValueFromSheet sheet cell = cellDoubleValue $ sheet ^? ixCell cell . cellValue . _Just
+cellDoubleValueFromSheet :: Worksheet -> CellLocation -> Double
+cellDoubleValueFromSheet sheet cell = cellDoubleValue $ sheet ^? ixCell' cell . cellValue . _Just
 
-cellDoubleValueFromSheetM :: Worksheet -> (RowIndex, ColumnIndex) -> Maybe Double
-cellDoubleValueFromSheetM sheet cell = cellDoubleValueM $ sheet ^? ixCell cell . cellValue . _Just
+cellDoubleValueFromSheetM :: Worksheet -> CellLocation -> Maybe Double
+cellDoubleValueFromSheetM sheet cell = cellDoubleValueM $ sheet ^? ixCell' cell . cellValue . _Just
 
 cellDoubleValue :: Maybe CellValue -> Double
 cellDoubleValue Nothing = 0
@@ -78,11 +127,11 @@ cellDoubleValueM Nothing               = Nothing
 cellDoubleValueM (Just (CellDouble d)) = Just d
 cellDoubleValueM (Just _)              = Nothing
 
-cellIntegralValueFromSheet :: (Integral a) => Worksheet -> (RowIndex, ColumnIndex) -> a
-cellIntegralValueFromSheet sheet cell = cellIntegralValue $ sheet ^? ixCell cell . cellValue . _Just
+cellIntegralValueFromSheet :: (Integral a) => Worksheet -> CellLocation -> a
+cellIntegralValueFromSheet sheet cell = cellIntegralValue $ sheet ^? ixCell' cell . cellValue . _Just
 
-cellIntegralValueFromSheetM :: (Integral a) => Worksheet -> (RowIndex, ColumnIndex) -> Maybe a
-cellIntegralValueFromSheetM sheet cell = cellIntegralValueM $ sheet ^? ixCell cell . cellValue . _Just
+cellIntegralValueFromSheetM :: (Integral a) => Worksheet -> CellLocation -> Maybe a
+cellIntegralValueFromSheetM sheet cell = cellIntegralValueM $ sheet ^? ixCell' cell . cellValue . _Just
 
 cellIntegralValue :: (Integral a) => Maybe CellValue -> a
 cellIntegralValue Nothing = 0
@@ -94,11 +143,11 @@ cellIntegralValueM Nothing               = Nothing
 cellIntegralValueM (Just (CellDouble d)) = Just $ floor d
 cellIntegralValueM (Just c)              = Nothing
 
-cellStringValueFromSheet :: Worksheet -> (RowIndex, ColumnIndex) -> Text
-cellStringValueFromSheet sheet cell = cellStringValue $ sheet ^? ixCell cell . cellValue . _Just
+cellStringValueFromSheet :: Worksheet -> CellLocation -> Text
+cellStringValueFromSheet sheet cell = cellStringValue $ sheet ^? ixCell' cell . cellValue . _Just
 
-cellStringValueFromSheetM :: Worksheet -> (RowIndex, ColumnIndex) -> Maybe Text
-cellStringValueFromSheetM sheet cell = cellStringValueM $ sheet ^? ixCell cell . cellValue . _Just
+cellStringValueFromSheetM :: Worksheet -> CellLocation -> Maybe Text
+cellStringValueFromSheetM sheet cell = cellStringValueM $ sheet ^? ixCell' cell . cellValue . _Just
 
 cellStringValue :: Maybe CellValue -> Text
 cellStringValue Nothing = ""
@@ -110,11 +159,11 @@ cellStringValueM Nothing             = Nothing
 cellStringValueM (Just (CellText t)) = Just t
 cellStringValueM (Just _)            = Nothing
 
-cellDayValueFromSheet :: Worksheet -> (RowIndex, ColumnIndex) -> Day
-cellDayValueFromSheet sheet cell = cellDayValue $ sheet ^? ixCell cell . cellValue . _Just
+cellDayValueFromSheet :: Worksheet -> CellLocation -> Day
+cellDayValueFromSheet sheet cell = cellDayValue $ sheet ^? ixCell' cell . cellValue . _Just
 
-cellDayValueFromSheetM :: Worksheet -> (RowIndex, ColumnIndex) -> Maybe Day
-cellDayValueFromSheetM sheet cell = cellDayValueM $ sheet ^? ixCell cell . cellValue . _Just
+cellDayValueFromSheetM :: Worksheet -> CellLocation -> Maybe Day
+cellDayValueFromSheetM sheet cell = cellDayValueM $ sheet ^? ixCell' cell . cellValue . _Just
 
 cellDayValue :: Maybe CellValue -> Day
 cellDayValue Nothing = error "cell not found"
