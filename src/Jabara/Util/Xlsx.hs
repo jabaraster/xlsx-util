@@ -40,7 +40,7 @@ import           Data.Time.Calendar
 import           Prelude              hiding (readFile)
 
 readBook :: FilePath -> IO Xlsx
-readBook path = readFile path >>= pure . toXlsx
+readBook path = toXlsx <$> readFile path
 
 type SheetName = Text
 type RowIndex = Int
