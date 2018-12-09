@@ -25,3 +25,6 @@ spec = do
       formatColumnIndex (CI 52)  `shouldBe`  "BA"
       formatColumnIndex (CI 702) `shouldBe`  "AAA"
       formatColumnIndex (CI 731) `shouldBe`  "ABD"
+    it "parse cell iIndex text" $ do
+      parseCellIndexText "A1"  `shouldBe` (Just $ CellIndex (RI 0) (CI 0))
+      parseCellIndexText "AA2" `shouldBe` (Just $ CellIndex (RI 1) (CI 26))

@@ -1,18 +1,32 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
 module Jabara.Xlsx.Types (
     RowIndex(..)
+  , rowIndexValue
+
   , ColumnIndex(..)
+  , columnIndexValue
+
   , CellIndex(..)
+  , origin
+  , ciRowIndex
+  , ciColumnIndex
+  , ciRow
+  , ciColumn
 
   , CellIndexTuple
 
   , formatColumnIndex
   , parseColumnIndexText
+  , parseColumnIndexTextUnsafe
   , parseCellIndexText
+  , parseCellIndexTextUnsafe
 ) where
 
 import           Control.Exception
+import           Control.Lens
+import           Control.Lens.TH
 import           Data.Functor.Identity
 import           Data.Maybe
 import           Data.String           (IsString, fromString)
@@ -26,9 +40,10 @@ type CellIndexTuple = (Int, Int)
   type RowIndex and instances.
 -}
 newtype RowIndex = RI {
-    rowIndexValue :: Int
+    _rowIndexValue :: Int
   }
   deriving (Eq, Ord)
+makeLenses ''RowIndex
 
 instance Show RowIndex where
   show (RI i) = show (i + 1)
@@ -48,15 +63,16 @@ instance Enum RowIndex where
   type ColumnIndex and instances.
 -}
 newtype ColumnIndex = CI {
-    columnIndexValue :: Int
+    _columnIndexValue :: Int
   }
   deriving (Eq, Ord)
+makeLenses ''ColumnIndex
 
 instance Show ColumnIndex where
   show = DT.unpack . formatColumnIndex
 
 instance IsString ColumnIndex where
-  fromString = fromJust . parseColumnIndexText . DT.pack
+  fromString = parseColumnIndexTextUnsafe . DT.pack
 
 instance Bounded ColumnIndex where
   minBound = CI 0
@@ -65,22 +81,6 @@ instance Bounded ColumnIndex where
 instance Enum ColumnIndex where
   toEnum = CI
   fromEnum (CI i) = i
-
-{- \
-  type CellIndex and instances.
--}
-data CellIndex =
-  CellIndex {
-    ciRowIndex    ::RowIndex
-  , ciColumnIndex::ColumnIndex
-  } deriving (Eq)
-
-instance Show CellIndex where
-  show = DT.unpack . formatCellIndex
-
-instance Read CellIndex where
-  -- 応用の効かない、よくない実装...
-  readsPrec i s = maybe [] (\ci -> [(ci,"")]) $ parseCellIndexText $ DT.pack $ snd $ splitAt i s
 
 formatColumnIndex :: ColumnIndex -> DT.Text
 formatColumnIndex (CI i)
@@ -124,8 +124,46 @@ parseColumnIndexText t
               let val = alpha * (26 ^ digit)
               in  Just (digit + 1, sum + val)
 
+parseColumnIndexTextUnsafe :: DT.Text -> ColumnIndex
+parseColumnIndexTextUnsafe = fromJust . parseColumnIndexText
+
+{- \
+  type CellIndex and instances.
+-}
+data CellIndex =
+  CellIndex {
+    _ciRowIndex    :: RowIndex
+  , _ciColumnIndex :: ColumnIndex
+  } deriving (Eq)
+
+{-| A1セル  -}
+origin :: CellIndex
+origin = CellIndex (RI 0) (CI 0)
+
+makeLenses ''CellIndex
+
+ciRow :: Lens' CellIndex RowIndex
+ciRow f (CellIndex r c) = (`CellIndex` c) <$> f r
+
+ciColumn :: Lens' CellIndex DT.Text
+ciColumn f (CellIndex r c) = CellIndex r . parseColumnIndexTextUnsafe <$> f (formatColumnIndex c)
+
+instance Bounded CellIndex where
+  minBound = CellIndex minBound minBound
+  maxBound = CellIndex maxBound maxBound
+
+instance IsString CellIndex where
+  fromString = parseCellIndexTextUnsafe . DT.pack
+
+instance Show CellIndex where
+  show = DT.unpack . formatCellIndex
+
+instance Read CellIndex where
+  -- 応用の効かない、よくない実装...
+  readsPrec i s = maybe [] (\ci -> [(ci,"")]) $ parseCellIndexText $ DT.pack $ snd $ splitAt i s
+
 formatCellIndex :: CellIndex -> DT.Text
-formatCellIndex ci = DT.pack $ show (ciColumnIndex ci) ++ show (ciRowIndex ci)
+formatCellIndex ci = DT.pack $ show (ci^.ciColumnIndex) ++ show (ci^.ciRowIndex)
 
 parseCellIndexText :: DT.Text -> Maybe CellIndex
 parseCellIndexText s = case parseCore s of
@@ -143,11 +181,14 @@ parseCellIndexText s = case parseCore s of
       case mCi of
         Nothing -> error "parse fail."
         Just ci -> pure CellIndex {
-                     ciRowIndex = row
-                   , ciColumnIndex = ci
+                     _ciRowIndex = row
+                   , _ciColumnIndex = ci
                    }
 
     rowParser :: TP.ParsecT String u Identity RowIndex
     rowParser = do
       rowString <- TP.many1 TP.digit
       pure $ RI $ flip (-) 1 $ read rowString
+
+parseCellIndexTextUnsafe :: DT.Text -> CellIndex
+parseCellIndexTextUnsafe = fromJust . parseCellIndexText

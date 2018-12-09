@@ -26,10 +26,6 @@ module Jabara.Xlsx (
   , (+^^)
   , (+>>)
 
-  , parseColumnIndexTextUnsafe
-
-  , parseCellIndexTextUnsafe
-
   , cellBoolValue
   , cellBoolValueFromSheet
   , cellBoolValueM
@@ -99,10 +95,10 @@ type SheetName = DT.Text
 {- |
   Codec.Xlsモジュールの、ixCellなどセルを扱う際のタプルに変換する.
 -}
-tuple :: CellIndex -> (Int, Int)
-tuple ci = (rowIndexValue (ciRowIndex ci) + 1, columnIndexValue (ciColumnIndex ci) + 1)
+tuple :: CellIndex -> CellIndexTuple
+tuple ci = (ci^.ciRowIndex^.rowIndexValue + 1, ci^.ciColumnIndex^.columnIndexValue + 1)
 
-fromTuple :: (Int, Int) -> CellIndex
+fromTuple :: CellIndexTuple -> CellIndex
 fromTuple (r, c) = CellIndex (RI (r - 1)) (CI (c- 1))
 
 {- |
@@ -127,12 +123,14 @@ columnCellTUnsafe :: RowIndex -> DT.Text -> CellIndexTuple
 columnCellTUnsafe row t = fromJust $ columnCellT row t
 
 moveRow :: Int -> CellIndex -> CellIndex
-moveRow val cell = let (RI row) = ciRowIndex cell
-               in  cell { ciRowIndex = RI (row + val) }
+moveRow val cell =
+  let (RI row) = cell^.ciRowIndex
+  in  cell&ciRowIndex .~ RI (row + val)
 
 moveColumn :: Int -> CellIndex -> CellIndex
-moveColumn val cell = let (CI row) = ciColumnIndex cell
-               in  cell { ciColumnIndex = CI (row + val) }
+moveColumn val cell =
+  let (CI row) = cell^.ciColumnIndex
+  in  cell&ciColumnIndex .~ CI (row + val)
 
 (+++) :: DT.Text -> RowIndex -> CellIndexTuple
 (+++) = flip columnCellTUnsafe
@@ -145,17 +143,11 @@ moveColumn val cell = let (CI row) = ciColumnIndex cell
 
 (^^^) :: CellIndexTuple -> RowIndex -> CellIndexTuple
 (^^^) t row = let ci = fromTuple t
-              in  tuple $ ci { ciRowIndex = row }
+              in  tuple $ ci&ciRowIndex .~ row
 
 (>>>) :: CellIndexTuple -> DT.Text -> CellIndexTuple
 (>>>) t col = let ci = fromTuple t
-              in  tuple $ ci { ciColumnIndex = parseColumnIndexTextUnsafe col }
-
-parseColumnIndexTextUnsafe :: DT.Text -> ColumnIndex
-parseColumnIndexTextUnsafe = fromJust . parseColumnIndexText
-
-parseCellIndexTextUnsafe :: DT.Text -> CellIndex
-parseCellIndexTextUnsafe = fromJust . parseCellIndexText
+              in  tuple $ ci&ciColumnIndex .~ parseColumnIndexTextUnsafe col
 
 {- |
   セルの値の取得.

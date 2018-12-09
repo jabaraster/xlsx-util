@@ -22,6 +22,7 @@ main = do
       let base = "A" +++ row
       in  sheet & cellValueAt base ?~ CellText "foo"
                 & cellValueAt (base >>> "B") ?~ CellDouble 1.0
+                & cellValueAt (fromTuple base & column .~ "D") ?~ CellDouble 1.0
                 & cellValueAt (base +>> 2) ?~ CellText "var"
     core1 :: ColumnIndex -> Worksheet -> Worksheet
     core1 col sheet =

@@ -21,3 +21,7 @@ spec = do
       cellStringValueFromSheet sheet (cellUnsafe "B1") `shouldBe` "家計簿"
     it "number value" $
       cellIntegralValueFromSheet sheet (cellUnsafe "C4") `shouldBe` (36000::Integer)
+    it "CellIndex lenses" $ do
+      let base = parseCellIndexTextUnsafe "A1"
+      (base & ciRow .~ RI 1) `shouldBe` parseCellIndexTextUnsafe "A2"
+      (base & ciColumn .~ "B") `shouldBe` parseCellIndexTextUnsafe "B1"
