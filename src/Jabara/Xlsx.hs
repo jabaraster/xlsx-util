@@ -135,19 +135,17 @@ moveColumn val cell =
 (+++) :: DT.Text -> RowIndex -> CellIndexTuple
 (+++) = flip columnCellTUnsafe
 
-(+^^) :: CellIndexTuple -> Int -> CellIndexTuple
-(+^^) t i = tuple $ moveRow i $ fromTuple t
+(+^^) :: CellIndex -> Int -> CellIndex
+(+^^) = flip moveRow
 
-(+>>) :: CellIndexTuple -> Int -> CellIndexTuple
-(+>>) t i = tuple $ moveColumn i $ fromTuple t
+(+>>) :: CellIndex -> Int -> CellIndex
+(+>>) = flip moveColumn
 
-(^^^) :: CellIndexTuple -> RowIndex -> CellIndexTuple
-(^^^) t row = let ci = fromTuple t
-              in  tuple $ ci&ciRowIndex .~ row
+(^^^) :: CellIndex -> RowIndex -> CellIndex
+(^^^) t row = t & ciRowIndex .~ row
 
-(>>>) :: CellIndexTuple -> DT.Text -> CellIndexTuple
-(>>>) t col = let ci = fromTuple t
-              in  tuple $ ci&ciColumnIndex .~ parseColumnIndexTextUnsafe col
+(>>>) :: CellIndex -> DT.Text -> CellIndex
+(>>>) t col = t & ciColumnIndex .~ parseColumnIndexTextUnsafe col
 
 {- |
   セルの値の取得.
