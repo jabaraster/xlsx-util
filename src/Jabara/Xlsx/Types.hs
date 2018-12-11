@@ -102,10 +102,11 @@ formatColumnIndex (CI i)
       let col = reverse $ map (flip (-) 1) $ tail $ reverse is
       in  col ++ [last is]
 
+    -- 26進数表現に於ける各桁毎の数値に変換する
     collectDigitCount :: Int -> [Int] -> [Int]
     collectDigitCount 0 is = is
     collectDigitCount remain is =
-      let div = floor ((fromIntegral remain / 26)::Double)
+      let div = floor (fromIntegral remain / 26)
           cnt = remain `mod` 26
       in  collectDigitCount div (cnt:is)
 
@@ -116,13 +117,9 @@ parseColumnIndexText t
   where
     core :: Char -> Maybe (Int, Int) -> Maybe (Int, Int)
     core _ Nothing = Nothing
-    core c (Just (digit, sum)) =
-      let alpha = fromEnum c - 65 + 1
-      in  if alpha < 1 || 26 < alpha
-            then Nothing
-            else
-              let val = alpha * (26 ^ digit)
-              in  Just (digit + 1, sum + val)
+    core c (Just (digit, sum))
+      | fromEnum c `elem` [65..90] = Just (digit + 1, sum + (fromEnum c - 64) * (26 ^ digit))
+      | otherwise = Nothing
 
 parseColumnIndexTextUnsafe :: DT.Text -> ColumnIndex
 parseColumnIndexTextUnsafe = fromJust . parseColumnIndexText

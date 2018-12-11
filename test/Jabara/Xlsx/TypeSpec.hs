@@ -14,6 +14,7 @@ spec = do
       parseColumnIndexText "AB" `shouldBe` (Just $ CI 27)
       parseColumnIndexText "BA" `shouldBe` (Just $ CI 52)
       parseColumnIndexText "AAA" `shouldBe` (Just $ CI 702)
+      parseColumnIndexText "ABM" `shouldBe` (Just $ CI 740)
       parseColumnIndexText ""   `shouldBe` Nothing
       parseColumnIndexText "a"  `shouldBe` Nothing
     it "format column index" $ do
