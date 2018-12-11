@@ -21,35 +21,36 @@ module Jabara.Xlsx (
   , fromTuple
 
   , (+++)
-  , (^^^)
-  , (>>>)
-  , (+^^)
-  , (+>>)
 
-  , cellBoolValue
-  , cellBoolValueFromSheet
-  , cellBoolValueM
-  , cellBoolValueFromSheetM
+  , boolValue
+  , boolValueM
+  , boolCellValue
+  , boolCellValueM
 
-  , cellDoubleValue
-  , cellDoubleValueFromSheet
-  , cellDoubleValueM
-  , cellDoubleValueFromSheetM
+  , doubleValue
+  , doubleValueM
+  , doubleCellValue
+  , doubleCellValueM
 
-  , cellIntegralValue
-  , cellIntegralValueFromSheet
-  , cellIntegralValueM
-  , cellIntegralValueFromSheetM
+  , integralValue
+  , integralValueM
+  , integralCellValue
+  , integralCellValueM
 
-  , cellStringValue
-  , cellStringValueFromSheet
-  , cellStringValueM
-  , cellStringValueFromSheetM
+  , stringValue
+  , stringValueM
+  , stringCellValue
+  , stringCellValueM
 
-  , cellDayValue
-  , cellDayValueFromSheet
-  , cellDayValueM
-  , cellDayValueFromSheetM
+  , dayValue
+  , dayValueM
+  , dayCellValue
+  , dayCellValueM
+
+  , isEmpty
+  , isEmpty'
+  , traverseRow
+  , traverseEveryRow
 
   , module Jabara.Xlsx.Types
 ) where
@@ -116,10 +117,10 @@ cell = parseCellIndexText
 cellUnsafe :: DT.Text -> CellIndex
 cellUnsafe = parseCellIndexTextUnsafe
 
-columnCellT :: RowIndex -> DT.Text -> Maybe CellIndexTuple
-columnCellT row t = tuple . CellIndex row <$> parseColumnIndexText t
+columnCellT :: RowIndex -> DT.Text -> Maybe CellIndex
+columnCellT row t = CellIndex row <$> parseColumnIndexText t
 
-columnCellTUnsafe :: RowIndex -> DT.Text -> CellIndexTuple
+columnCellTUnsafe :: RowIndex -> DT.Text -> CellIndex
 columnCellTUnsafe row t = fromJust $ columnCellT row t
 
 moveRow :: Int -> CellIndex -> CellIndex
@@ -132,100 +133,118 @@ moveColumn val cell =
   let (CI row) = cell^.ciColumnIndex
   in  cell&ciColumnIndex .~ CI (row + val)
 
-(+++) :: DT.Text -> RowIndex -> CellIndexTuple
-(+++) = flip columnCellTUnsafe
-
-(+^^) :: CellIndex -> Int -> CellIndex
-(+^^) = flip moveRow
-
-(+>>) :: CellIndex -> Int -> CellIndex
-(+>>) = flip moveColumn
-
-(^^^) :: CellIndex -> RowIndex -> CellIndex
-(^^^) t row = t & ciRowIndex .~ row
-
-(>>>) :: CellIndex -> DT.Text -> CellIndex
-(>>>) t col = t & ciColumnIndex .~ parseColumnIndexTextUnsafe col
+(+++) :: ColumnIndex -> RowIndex -> CellIndex
+(+++) = flip CellIndex 
 
 {- |
   セルの値の取得.
 -}
-cellBoolValueFromSheet :: Worksheet -> CellIndex -> Bool
-cellBoolValueFromSheet sheet cell = cellBoolValue $ sheet ^? ixCell (tuple cell) . cellValue . _Just
+boolValue :: Worksheet -> CellIndex -> Bool
+boolValue sheet cell = boolCellValue $ sheet ^? ixCell (tuple cell) . cellValue . _Just
 
-cellBoolValueFromSheetM :: Worksheet -> CellIndex -> Maybe Bool
-cellBoolValueFromSheetM sheet cell = cellBoolValueM $ sheet ^? ixCell (tuple cell) . cellValue . _Just
+boolValueM :: Worksheet -> CellIndex -> Maybe Bool
+boolValueM sheet cell = boolCellValueM $ sheet ^? ixCell (tuple cell) . cellValue . _Just
 
-cellBoolValue :: Maybe CellValue -> Bool
-cellBoolValue Nothing = error "cell not found"
-cellBoolValue (Just (CellBool b)) = b
-cellBoolValue (Just c)              = error ("unexpected cell value --> " ++ show c)
+boolCellValue :: Maybe CellValue -> Bool
+boolCellValue Nothing = error "cell not found"
+boolCellValue (Just (CellBool b)) = b
+boolCellValue (Just c)              = error ("unexpected cell value --> " ++ show c)
 
-cellBoolValueM :: Maybe CellValue -> Maybe Bool
-cellBoolValueM Nothing             = Nothing
-cellBoolValueM (Just (CellBool b)) = Just b
-cellBoolValueM (Just _)            = Nothing
+boolCellValueM :: Maybe CellValue -> Maybe Bool
+boolCellValueM Nothing             = Nothing
+boolCellValueM (Just (CellBool b)) = Just b
+boolCellValueM (Just _)            = Nothing
 
-cellDoubleValueFromSheet :: Worksheet -> CellIndex -> Double
-cellDoubleValueFromSheet sheet cell = cellDoubleValue $ sheet ^? ixCell (tuple cell) . cellValue . _Just
+doubleValue :: Worksheet -> CellIndex -> Double
+doubleValue sheet cell = doubleCellValue $ sheet ^? ixCell (tuple cell) . cellValue . _Just
 
-cellDoubleValueFromSheetM :: Worksheet -> CellIndex -> Maybe Double
-cellDoubleValueFromSheetM sheet cell = cellDoubleValueM $ sheet ^? ixCell (tuple cell) . cellValue . _Just
+doubleValueM :: Worksheet -> CellIndex -> Maybe Double
+doubleValueM sheet cell = doubleCellValueM $ sheet ^? ixCell (tuple cell) . cellValue . _Just
 
-cellDoubleValue :: Maybe CellValue -> Double
-cellDoubleValue Nothing = 0
-cellDoubleValue (Just (CellDouble d)) = d
-cellDoubleValue (Just c)              = error ("unexpected cell value --> " ++ show c)
+doubleCellValue :: Maybe CellValue -> Double
+doubleCellValue Nothing = 0
+doubleCellValue (Just (CellDouble d)) = d
+doubleCellValue (Just c)              = error ("unexpected cell value --> " ++ show c)
 
-cellDoubleValueM :: Maybe CellValue -> Maybe Double
-cellDoubleValueM Nothing               = Nothing
-cellDoubleValueM (Just (CellDouble d)) = Just d
-cellDoubleValueM (Just _)              = Nothing
+doubleCellValueM :: Maybe CellValue -> Maybe Double
+doubleCellValueM Nothing               = Nothing
+doubleCellValueM (Just (CellDouble d)) = Just d
+doubleCellValueM (Just _)              = Nothing
 
-cellIntegralValueFromSheet :: (Integral a) => Worksheet -> CellIndex -> a
-cellIntegralValueFromSheet sheet cell = cellIntegralValue $ sheet ^? ixCell (tuple cell) . cellValue . _Just
+integralValue :: (Integral a) => Worksheet -> CellIndex -> a
+integralValue sheet cell = integralCellValue $ sheet ^? ixCell (tuple cell) . cellValue . _Just
 
-cellIntegralValueFromSheetM :: (Integral a) => Worksheet -> CellIndex -> Maybe a
-cellIntegralValueFromSheetM sheet cell = cellIntegralValueM $ sheet ^? ixCell (tuple cell) . cellValue . _Just
+integralValueM :: (Integral a) => Worksheet -> CellIndex -> Maybe a
+integralValueM sheet cell = integralCellValueM $ sheet ^? ixCell (tuple cell) . cellValue . _Just
 
-cellIntegralValue :: (Integral a) => Maybe CellValue -> a
-cellIntegralValue Nothing = 0
-cellIntegralValue (Just (CellDouble d)) = ceiling d
-cellIntegralValue (Just c)              = error ("unexpected cell value --> " ++ show c)
+integralCellValue :: (Integral a) => Maybe CellValue -> a
+integralCellValue Nothing = 0
+integralCellValue (Just (CellDouble d)) = ceiling d
+integralCellValue (Just c)              = error ("unexpected cell value --> " ++ show c)
 
-cellIntegralValueM :: (Integral a) => Maybe CellValue -> Maybe a
-cellIntegralValueM Nothing               = Nothing
-cellIntegralValueM (Just (CellDouble d)) = Just $ floor d
-cellIntegralValueM (Just c)              = Nothing
+integralCellValueM :: (Integral a) => Maybe CellValue -> Maybe a
+integralCellValueM Nothing               = Nothing
+integralCellValueM (Just (CellDouble d)) = Just $ floor d
+integralCellValueM (Just c)              = Nothing
 
-cellStringValueFromSheet :: Worksheet -> CellIndex -> DT.Text
-cellStringValueFromSheet sheet cell = cellStringValue $ sheet ^? ixCell (tuple cell) . cellValue . _Just
+stringValue :: Worksheet -> CellIndex -> DT.Text
+stringValue sheet cell = stringCellValue $ sheet ^? ixCell (tuple cell) . cellValue . _Just
 
-cellStringValueFromSheetM :: Worksheet -> CellIndex -> Maybe DT.Text
-cellStringValueFromSheetM sheet cell = cellStringValueM $ sheet ^? ixCell (tuple cell) . cellValue . _Just
+stringValueM :: Worksheet -> CellIndex -> Maybe DT.Text
+stringValueM sheet cell = stringCellValueM $ sheet ^? ixCell (tuple cell) . cellValue . _Just
 
-cellStringValue :: Maybe CellValue -> DT.Text
-cellStringValue Nothing = ""
-cellStringValue (Just (CellText t)) = t
-cellStringValue (Just c)            = error ("unexpected cell value --> " ++ show c)
+stringCellValue :: Maybe CellValue -> DT.Text
+stringCellValue Nothing = ""
+stringCellValue (Just (CellText t)) = t
+stringCellValue (Just c)            = error ("unexpected cell value --> " ++ show c)
 
-cellStringValueM :: Maybe CellValue -> Maybe DT.Text
-cellStringValueM Nothing             = Nothing
-cellStringValueM (Just (CellText t)) = Just t
-cellStringValueM (Just _)            = Nothing
+stringCellValueM :: Maybe CellValue -> Maybe DT.Text
+stringCellValueM Nothing             = Nothing
+stringCellValueM (Just (CellText t)) = Just t
+stringCellValueM (Just _)            = Nothing
 
-cellDayValueFromSheet :: Worksheet -> CellIndex -> Day
-cellDayValueFromSheet sheet cell = cellDayValue $ sheet ^? ixCell (tuple cell) . cellValue . _Just
+dayValue :: Worksheet -> CellIndex -> Day
+dayValue sheet cell = dayCellValue $ sheet ^? ixCell (tuple cell) . cellValue . _Just
 
-cellDayValueFromSheetM :: Worksheet -> CellIndex -> Maybe Day
-cellDayValueFromSheetM sheet cell = cellDayValueM $ sheet ^? ixCell (tuple cell) . cellValue . _Just
+dayValueM :: Worksheet -> CellIndex -> Maybe Day
+dayValueM sheet cell = dayCellValueM $ sheet ^? ixCell (tuple cell) . cellValue . _Just
 
-cellDayValue :: Maybe CellValue -> Day
-cellDayValue Nothing = error "cell not found"
-cellDayValue mCell = let dayValue = cellIntegralValue mCell
+dayCellValue :: Maybe CellValue -> Day
+dayCellValue Nothing = error "cell not found"
+dayCellValue mCell = let dayValue = integralCellValue mCell
                      in  addDays (dayValue - 2) $ fromGregorian 1900 1 1
 
-cellDayValueM :: Maybe CellValue -> Maybe Day
-cellDayValueM Nothing = Nothing
-cellDayValueM mCell = let dayValue = cellIntegralValue mCell
+dayCellValueM :: Maybe CellValue -> Maybe Day
+dayCellValueM Nothing = Nothing
+dayCellValueM mCell = let dayValue = integralCellValue mCell
                       in  Just $ addDays (dayValue - 2) $ fromGregorian 1900 1 1
+
+
+{-|
+  ユーティリティ
+-}
+
+isEmpty :: Worksheet -> CellIndex -> Bool
+isEmpty sheet cell = maybe True core $ sheet ^? ixCell (tuple cell) . cellValue . _Just
+  where
+    core :: CellValue -> Bool
+    core (CellText t) = t == ""
+    core _            = False
+
+isEmpty' :: Worksheet -> ColumnIndex -> RowIndex -> Bool
+isEmpty' sheet col row = isEmpty sheet (CellIndex row col)
+
+traverseRow :: Worksheet -> RowIndex -> Int -> (RowIndex -> Bool) -> (RowIndex -> Maybe a) -> [a]
+traverseRow sheet startRow skip endDecider converter =
+  core sheet startRow skip endDecider converter []
+  where
+    core:: Worksheet -> RowIndex -> Int -> (RowIndex -> Bool) -> (RowIndex -> Maybe a) -> [a] -> [a]
+    core sheet currentRow skip endDecider converter collected =
+      if endDecider currentRow
+        then collected
+        else
+          let newCollected = maybe collected (\val -> collected ++ [val]) $ converter currentRow
+          in core sheet (currentRow +.. skip) skip endDecider converter newCollected
+
+traverseEveryRow :: Worksheet -> RowIndex -> (RowIndex -> Bool) -> (RowIndex -> Maybe a) -> [a]
+traverseEveryRow sheet startRow = traverseRow sheet startRow 1

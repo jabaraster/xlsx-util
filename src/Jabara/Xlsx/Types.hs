@@ -17,6 +17,9 @@ module Jabara.Xlsx.Types (
 
   , CellIndexTuple
 
+  , RowMovable(..)
+  , ColumnMovable(..)
+
   , formatColumnIndex
   , parseColumnIndexText
   , parseColumnIndexTextUnsafe
@@ -35,6 +38,16 @@ import qualified Text.Parsec           as TP
 import           Text.Parsec.Error     (ParseError (..))
 
 type CellIndexTuple = (Int, Int)
+
+class RowMovable a where
+  (+^^) :: a -> Int -> a
+  (+^^) v i = v +.. (-i)
+  (+..) :: a -> Int -> a
+
+class ColumnMovable a where
+  (+>>) :: a -> Int -> a
+  (<<+) :: a -> Int -> a
+  (<<+) v i = v +>> (-i)
 
 {- \
   type RowIndex and instances.
@@ -59,6 +72,9 @@ instance Enum RowIndex where
   toEnum = RI
   fromEnum (RI i) = i
 
+instance RowMovable RowIndex where
+  (RI v) +.. i = RI (v + i)
+
 {- \
   type ColumnIndex and instances.
 -}
@@ -81,6 +97,9 @@ instance Bounded ColumnIndex where
 instance Enum ColumnIndex where
   toEnum = CI
   fromEnum (CI i) = i
+
+instance ColumnMovable ColumnIndex where
+  (CI v) +>> i = CI (v + i)
 
 formatColumnIndex :: ColumnIndex -> DT.Text
 formatColumnIndex (CI i)
@@ -158,6 +177,12 @@ instance Show CellIndex where
 instance Read CellIndex where
   -- 応用の効かない、よくない実装...
   readsPrec i s = maybe [] (\ci -> [(ci,"")]) $ parseCellIndexText $ DT.pack $ snd $ splitAt i s
+
+instance RowMovable CellIndex where
+  ci +.. i = ci & ciRowIndex .~ RI (ci ^. ciRowIndex ^. rowIndexValue + i)
+
+instance ColumnMovable CellIndex where
+  ci +>> i = ci & ciColumnIndex .~ CI (ci ^. ciColumnIndex ^. columnIndexValue + i)
 
 formatCellIndex :: CellIndex -> DT.Text
 formatCellIndex ci = DT.pack $ show (ci^.ciColumnIndex) ++ show (ci^.ciRowIndex)
