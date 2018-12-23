@@ -43,11 +43,13 @@ class RowMovable a where
   (+^^) :: a -> Int -> a
   (+^^) v i = v +.. (-i)
   (+..) :: a -> Int -> a
+  (<$.>) :: (Int -> Int) -> a -> a
 
 class ColumnMovable a where
   (+>>) :: a -> Int -> a
   (<<+) :: a -> Int -> a
   (<<+) v i = v +>> (-i)
+  (<$>>) :: (Int -> Int) -> a -> a
 
 {- \
   type RowIndex and instances.
@@ -74,6 +76,7 @@ instance Enum RowIndex where
 
 instance RowMovable RowIndex where
   (RI v) +.. i = RI (v + i)
+  f <$.> (RI v) = RI (f v)
 
 {- \
   type ColumnIndex and instances.
@@ -100,6 +103,7 @@ instance Enum ColumnIndex where
 
 instance ColumnMovable ColumnIndex where
   (CI v) +>> i = CI (v + i)
+  f <$>> (CI v) = CI (f v)
 
 formatColumnIndex :: ColumnIndex -> DT.Text
 formatColumnIndex (CI i)
@@ -180,9 +184,11 @@ instance Read CellIndex where
 
 instance RowMovable CellIndex where
   ci +.. i = ci & ciRowIndex .~ RI (ci ^. ciRowIndex ^. rowIndexValue + i)
+  f <$.> (CellIndex ri ci) = CellIndex (f <$.> ri) ci
 
 instance ColumnMovable CellIndex where
   ci +>> i = ci & ciColumnIndex .~ CI (ci ^. ciColumnIndex ^. columnIndexValue + i)
+  f <$>> (CellIndex ri ci) = CellIndex ri (f <$>> ci)
 
 formatCellIndex :: CellIndex -> DT.Text
 formatCellIndex ci = DT.pack $ show (ci^.ciColumnIndex) ++ show (ci^.ciRowIndex)

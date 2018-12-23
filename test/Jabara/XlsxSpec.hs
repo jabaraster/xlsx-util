@@ -18,9 +18,9 @@ spec = do
     let book  = head $ rights [mBook]
         sheet = fromJust $ book ^? ixSheet "家計簿"
     it "text value" $
-      cellStringValueFromSheet sheet (cellUnsafe "B1") `shouldBe` "家計簿"
+      stringValue sheet (cellUnsafe "B1") `shouldBe` "家計簿"
     it "number value" $
-      cellIntegralValueFromSheet sheet (cellUnsafe "C4") `shouldBe` (36000::Integer)
+      integralValue sheet (cellUnsafe "C4") `shouldBe` (36000::Integer)
     it "CellIndex lenses" $ do
       let base = parseCellIndexTextUnsafe "A1"
       (base & ciRow .~ RI 1) `shouldBe` parseCellIndexTextUnsafe "A2"

@@ -26,6 +26,12 @@ spec = do
       formatColumnIndex (CI 52)  `shouldBe`  "BA"
       formatColumnIndex (CI 702) `shouldBe`  "AAA"
       formatColumnIndex (CI 731) `shouldBe`  "ABD"
-    it "parse cell iIndex text" $ do
+    it "parse cell index" $ do
       parseCellIndexText "A1"  `shouldBe` (Just $ CellIndex (RI 0) (CI 0))
       parseCellIndexText "AA2" `shouldBe` (Just $ CellIndex (RI 1) (CI 26))
+    it "row movable" $ do
+      (+) 1 <$.> "A1" `shouldBe` parseCellIndexTextUnsafe "A2"
+      flip (-) 1 <$.> "A10" `shouldBe` parseCellIndexTextUnsafe "A9"
+    it "column movable" $ do
+      (+) 1 <$>> "A1" `shouldBe` parseCellIndexTextUnsafe "B1"
+      flip (-) 1 <$>> "C1" `shouldBe` parseCellIndexTextUnsafe "B1"
